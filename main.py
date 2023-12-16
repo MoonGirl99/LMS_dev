@@ -5,10 +5,8 @@ from sqlalchemy.orm import sessionmaker
 
 from models import Course, Lesson, UserProfile, Base
 
-DATABASE_URL = "postgresql://lms:admin@127.0.0.1:5432/lmsdb"
-# DATABASE_URL = "postgresql://lms:admin@postgres:5432/lmsdb
+DATABASE_URL = "postgresql://lms:admin@postgres:5432/lmsdb"
 engine = create_engine(DATABASE_URL)
-
 app = FastAPI()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 db = SessionLocal()
