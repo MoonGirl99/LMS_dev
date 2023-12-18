@@ -1,69 +1,59 @@
-# test_main.py
-
-import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from main import app, db, create_tables
 
-from main import SessionLocal, app, create_tables, create_engine, db
 
-# Create test database
-DATABASE_URL = "postgresql://test_lms:admin@test_postgres:5432/test_lmsdb"
-app.dependency_overrides[create_tables] = lambda: None
 
-app.dependency_overrides[db] = lambda: SessionLocal(bind=create_engine(DATABASE_URL))
+DATABASE_URL_TEST = "postgresql://lms:admin@postgres:5432/lmsdb"
+engine_test = create_engine(DATABASE_URL_TEST)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine_test)
+
+app.dependency_overrides[db] = TestingSessionLocal
 
 client = TestClient(app)
 
 
-@pytest.fixture(scope="module")
-def test_app():
+def setup_function():
     create_tables()
-    return app
 
 
-def test_create_course(test_app):
-    response = client.post(
-        "/courses/",
-        json={"name": "Test Course", "description": "Test Description", "user_id": 1},
-    )
+def test_create_course():
+    response = client.post("/courses/", json={"name": "Test Course", "description": "Test Description", "user_id": 1})
     assert response.status_code == 200
     assert response.json()["name"] == "Test Course"
+    assert response.json()["description"] == "Test Description"
+    assert response.json()["user_id"] == 1
 
 
-def test_read_course(test_app):
-    # Assuming there is a course with ID 1 in the database
+def test_read_course():
     response = client.get("/courses/1")
     assert response.status_code == 200
     assert response.json()["course_id"] == 1
 
 
-def test_create_lesson(test_app):
-    # Assuming there is a course with ID 1 in the database
-    response = client.post(
-        "/courses/1/lessons/",
-        json={"title": "Test Lesson", "content": "Test Content"},
-    )
+def test_create_lesson():
+    response = client.post("/courses/1/lessons/", json={"title": "Test Lesson", "content": "Test Content"})
     assert response.status_code == 200
     assert response.json()["title"] == "Test Lesson"
+    assert response.json()["content"] == "Test Content"
+    assert response.json()["course_id"] == 1
 
 
-def test_read_lesson(test_app):
-    # Assuming there is a lesson with ID 1 in the database
+def test_read_lesson():
     response = client.get("/lessons/1")
     assert response.status_code == 200
     assert response.json()["lesson_id"] == 1
 
 
-def test_create_user_profile(test_app):
-    response = client.post(
-        "/user_profiles/", json={"username": "test_user", "email": "test@example.com"}
-    )
+def test_create_user_profile():
+    response = client.post("/user_profiles/", json={"username": "TestUser", "email": "test@example.com"})
     assert response.status_code == 200
-    assert response.json()["username"] == "test_user"
+    assert response.json()["username"] == "TestUser"
+    assert response.json()["email"] == "test@example.com"
 
 
-def test_read_user_profile(test_app):
-    # Assuming there is a user profile with ID 1 in the database
+def test_read_user_profile():
     response = client.get("/user_profiles/1")
     assert response.status_code == 200
     assert response.json()["user_id"] == 1
-

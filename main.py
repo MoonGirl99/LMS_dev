@@ -2,15 +2,32 @@
 from fastapi import FastAPI, HTTPException
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from fastapi_limiter import FastAPILimiter
+import fastapi_limiter.depends as limiter_depends
+from fastapi_limiter.extension import RateLimiter
+from fastapi import Depends
+from loguru import logger
 
 from models import Course, Lesson, UserProfile, Base
 
+
+
+
+# Database
 DATABASE_URL = "postgresql://lms:admin@postgres:5432/lmsdb"
 engine = create_engine(DATABASE_URL)
+
+# FastAPI
 app = FastAPI()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 db = SessionLocal()
 
+# Logging
+logger.add("logs/application.log", rotation="500 MB", level="INFO")
+
+# Rate Limit
+FastAPILimiter.init()
+rate_limit = RateLimiter(10, 1)
 
 # Defined Variables
 courses = []
@@ -19,9 +36,8 @@ user_profiles = []
 
 
 # Routes
-
 @app.post("/courses/")
-def create_course(name: str, description: str, user_id: int):
+def create_course(name: str, description: str, user_id: int, db: Session = Depends(get_db)):
     course = db.Course(name=name, description=description, user_id=user_id)
     db.add(course)
     db.commit()
@@ -84,6 +100,7 @@ def read_user_profile(user_id: int):
     return user_profile
 
 
+# create tables
 def create_tables():
     Base.metadata.create_all(bind=engine)
 
